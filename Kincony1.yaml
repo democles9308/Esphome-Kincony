@@ -1,0 +1,1068 @@
+substitutions:
+  esphome_name : Kincony-1
+  
+esphome:
+  name: kincony-1
+  platform: ESP32
+  board: esp32dev
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  manual_ip:
+    static_ip: 192.168.146.5
+    gateway: 192.168.146.1
+    subnet: 255.255.255.0
+
+
+# Enable logging on UART1 - GPIO 17/16 - disabled
+logger:
+  level: none
+  hardware_uart: UART1
+  baud_rate: 0
+
+# set time to HA
+time:
+  - platform: homeassistant
+  
+# Enable Home Assistant API
+api:
+  password: !secret api_password
+
+ota:
+  password: !secret ota_password
+
+captive_portal:
+
+globals:
+  - id: toestand_1
+    type: bool[32]
+    initial_value: '{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}'
+     
+# Bus instellingen
+i2c:
+  sda: 21
+  scl: 22
+  scan: false
+  frequency: 400 kHz
+
+uart:   # output via UART0 to Kincony board #1
+  tx_pin: 1
+  rx_pin: 3
+  baud_rate: 115200
+
+#fonts
+font:
+  - file: "fonts/Arial.ttf"
+    id: my_font
+    size: 12     
+  - file: "fonts/Arial.ttf"
+    id: my_font_big
+    size: 38    
+
+#displays
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    rotation: 90
+    update_interval: 1s
+    id: oled
+    lambda: |-
+      it.printf(0, 0, id(my_font), "IP: %s",id(IP).state.c_str());
+      it.printf(0, 14, id(my_font), "SW: %i", id(knop1).state);
+      it.printf(7,40, id(my_font_big), "%.0f", id(kanaal).state);
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      id: IP
+
+#I/O expanders
+pcf8574:
+  - id: 'pcf8575_22'
+    address: 0x22
+    pcf8575: true
+    
+  - id: 'pcf8575_23'
+    address: 0x23
+    pcf8575: true
+  
+###### SENSOREN ##############""   
+sensor:
+  - platform: rotary_encoder
+    name: "Kanaal"
+    id: kanaal
+    pin_a:
+      number: 34
+      mode:
+        input: true
+    pin_b:
+      number: 35
+      mode:
+        input: true
+    resolution: 1
+    #publish_initial_value: true
+    filters:
+      - lambda: |-
+          if (x < 1.0) {x= 32.0;}
+          if (x > 32.0) {x= 1.0;}
+          return x;
+    on_value:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: !lambda "return x;"
+        - component.update: oled   
+
+binary_sensor:
+  - platform: gpio
+    name: "rotary knop"
+    id: knop1
+    pin:
+      number: 32
+      mode:
+        input: true
+        pullup: false
+      inverted: true
+    on_press:
+      then: 
+         - uart.write: !lambda
+              int k = (int)id(kanaal).state;
+              std::string cms = "RELAY-SET-255," + to_string(k) + "," + to_string(!id(toestand_1)[k-1]) + "\r\n";
+              id(toestand_1)[k-1]= !id(toestand_1)[k-1];
+              return std::vector<unsigned char>(cms.begin(), cms.end());   
+    internal: true
+              
+# Kanaal 1-16 module 22
+  - platform: gpio
+    name: "SW_1"
+    pin:
+      pcf8574: pcf8575_22
+      number: 0
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 1
+        - component.update: oled 
+        - switch.toggle: sw1
+    internal: true
+    
+  - platform: gpio
+    name: "SW_2"
+    pin:
+      pcf8574: pcf8575_22
+      number: 1
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 2
+        - component.update: oled 
+        - switch.toggle: sw2
+    internal: true
+
+  - platform: gpio
+    name: "SW_3"
+    pin:
+      pcf8574: pcf8575_22
+      number: 2
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 3
+        - component.update: oled 
+        - switch.toggle: sw3
+    internal: true
+    
+  - platform: gpio
+    name: "SW_4"
+    pin:
+      pcf8574: pcf8575_22
+      number: 3
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 4
+        - component.update: oled 
+        - switch.toggle: sw4
+    internal: true
+    
+  - platform: gpio
+    name: "SW_5"
+    pin:
+      pcf8574: pcf8575_22
+      number: 4
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 5
+        - component.update: oled 
+        - switch.toggle: sw5
+    internal: true
+
+  - platform: gpio
+    name: "SW_6"
+    pin:
+      pcf8574: pcf8575_22
+      number: 5
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 6
+        - component.update: oled 
+        - switch.toggle: sw6
+    internal: true
+
+  - platform: gpio
+    name: "SW_7"
+    pin:
+      pcf8574: pcf8575_22
+      number: 6
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 7
+        - component.update: oled 
+        - switch.toggle: sw7
+    internal: true
+
+  - platform: gpio
+    name: "SW_8"
+    pin:
+      pcf8574: pcf8575_22
+      number: 7
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 8
+        - component.update: oled 
+        - switch.toggle: sw8
+    internal: true
+    
+  - platform: gpio
+    name: "SW_9"
+    pin:
+      pcf8574: pcf8575_22
+      number: 8
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 9
+        - component.update: oled 
+        - switch.toggle: sw9
+    internal: true
+
+  - platform: gpio
+    name: "SW_10"
+    pin:
+      pcf8574: pcf8575_22
+      number: 9
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 10
+        - component.update: oled 
+        - switch.toggle: sw10
+    internal: true
+    
+  - platform: gpio
+    name: "SW_11"
+    pin:
+      pcf8574: pcf8575_22
+      number: 10
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 11
+        - component.update: oled 
+        - switch.toggle: sw12
+    internal: true
+    
+  - platform: gpio
+    name: "SW_12"
+    pin:
+      pcf8574: pcf8575_22
+      number: 11
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 12
+        - component.update: oled 
+        - switch.toggle: sw12
+    internal: true
+
+  - platform: gpio
+    name: "SW_13"
+    pin:
+      pcf8574: pcf8575_22
+      number: 12
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 13
+        - component.update: oled 
+        - switch.toggle: sw13
+    internal: true
+
+  - platform: gpio
+    name: "SW_14"
+    pin:
+      pcf8574: pcf8575_22
+      number: 13
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 14
+        - component.update: oled 
+        - switch.toggle: sw14
+    internal: true
+    
+  - platform: gpio
+    name: "SW_15"
+    pin:
+      pcf8574: pcf8575_22
+      number: 14
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 15
+        - component.update: oled 
+        - switch.toggle: sw15
+    internal: true
+    
+  - platform: gpio
+    name: "SW_16"
+    pin:
+      pcf8574: pcf8575_22
+      number: 15
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 16
+        - component.update: oled 
+        - switch.toggle: sw16
+    internal: true
+    
+# Kanaal 17-32 module 23
+  - platform: gpio
+    name: "SW_17"
+    pin:
+      pcf8574: pcf8575_23
+      number: 0
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 17
+        - component.update: oled 
+        - switch.toggle: sw17
+    internal: true
+
+  - platform: gpio
+    name: "SW_18"
+    pin:
+      pcf8574: pcf8575_23
+      number: 1
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 18
+        - component.update: oled 
+        - switch.toggle: sw18
+    internal: true
+    
+  - platform: gpio
+    name: "SW_19"
+    pin:
+      pcf8574: pcf8575_23
+      number: 2
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 19
+        - component.update: oled 
+        - switch.toggle: sw19
+    internal: true
+    
+  - platform: gpio
+    name: "SW_20"
+    pin:
+      pcf8574: pcf8575_23
+      number: 3
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 5
+        - component.update: oled 
+        - switch.toggle: sw20
+    internal: true
+
+  - platform: gpio
+    name: "SW_21"
+    pin:
+      pcf8574: pcf8575_23
+      number: 4
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 21
+        - component.update: oled 
+        - switch.toggle: sw21
+    internal: true
+
+  - platform: gpio
+    name: "SW_22"
+    pin:
+      pcf8574: pcf8575_23
+      number: 5
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 22
+        - component.update: oled 
+        - switch.toggle: sw22
+    internal: true
+
+  - platform: gpio
+    name: "SW_23"
+    pin:
+      pcf8574: pcf8575_23
+      number: 6
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 23
+        - component.update: oled 
+        - switch.toggle: sw23
+    internal: true
+    
+  - platform: gpio
+    name: "SW_24"
+    pin:
+      pcf8574: pcf8575_23
+      number: 7
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 24
+        - component.update: oled 
+        - switch.toggle: sw24
+    internal: true
+
+  - platform: gpio
+    name: "SW_25"
+    pin:
+      pcf8574: pcf8575_23
+      number: 8
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 25
+        - component.update: oled 
+        - switch.toggle: sw25
+    internal: true
+    
+  - platform: gpio
+    name: "SW_26"
+    pin:
+      pcf8574: pcf8575_23
+      number: 9
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 26
+        - component.update: oled 
+        - switch.toggle: sw26
+    internal: true
+    
+  - platform: gpio
+    name: "SW_12"
+    pin:
+      pcf8574: pcf8575_23
+      number: 10
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 27
+        - component.update: oled 
+        - switch.toggle: sw27
+    internal: true
+
+  - platform: gpio
+    name: "SW_28"
+    pin:
+      pcf8574: pcf8575_23
+      number: 11
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 28
+        - component.update: oled 
+        - switch.toggle: sw28
+    internal: true
+
+  - platform: gpio
+    name: "SW_29"
+    pin:
+      pcf8574: pcf8575_23
+      number: 12
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 29
+        - component.update: oled 
+        - switch.toggle: sw29
+    internal: true
+    
+  - platform: gpio
+    name: "SW_30"
+    pin:
+      pcf8574: pcf8575_23
+      number: 13
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 30
+        - component.update: oled 
+        - switch.toggle: sw30
+    internal: true
+    
+  - platform: gpio
+    name: "SW_31"
+    pin:
+      pcf8574: pcf8575_23
+      number: 14
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 31
+        - component.update: oled 
+        - switch.toggle: sw31
+    internal: true
+    
+  - platform: gpio
+    name: "SW_32"
+    pin:
+      pcf8574: pcf8575_23
+      number: 15
+      mode: INPUT
+      inverted: true
+    on_press:
+      then:
+        - sensor.rotary_encoder.set_value:
+            id: kanaal
+            value: 32
+        - component.update: oled 
+        - switch.toggle: sw32
+    internal: true
+    
+###### SWITCHEN ######################
+switch:
+  - platform: template
+    name: "sw - 1"
+    id: sw1
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,1,1\r\n"
+        - lambda: 'id(toestand_1)[0]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,1,0\r\n"
+        - lambda: 'id(toestand_1)[0]=false;'
+    
+  - platform: template
+    name: "sw - 2"
+    id: sw2
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,2,1\r\n"
+        - lambda: 'id(toestand_1)[1]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,2,0\r\n"
+        - lambda: 'id(toestand_1)[1]=false;'
+
+  - platform: template
+    name: "sw - 3"
+    id: sw3
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,3,1\r\n"
+        - lambda: 'id(toestand_1)[2]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,3,0\r\n"
+        - lambda: 'id(toestand_1)[2]=false;'
+
+  - platform: template
+    name: "sw - 4"
+    id: sw4
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,4,1\r\n"
+        - lambda: 'id(toestand_1)[3]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,4,0\r\n"
+        - lambda: 'id(toestand_1)[3]=false;'
+ 
+  - platform: template
+    name: "sw - 5"
+    id: sw5
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,5,1\r\n"
+        - lambda: 'id(toestand_1)[4]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,5,0\r\n"
+        - lambda: 'id(toestand_1)[4]=false;'
+        
+  - platform: template
+    name: "sw - 6"
+    id: sw6
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,6,1\r\n"
+        - lambda: 'id(toestand_1)[5]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,6,0\r\n"
+        - lambda: 'id(toestand_1)[5]=false;'
+
+  - platform: template
+    name: "sw - 7"
+    id: sw7
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,7,1\r\n"
+        - lambda: 'id(toestand_1)[6]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,7,0\r\n"
+        - lambda: 'id(toestand_1)[6]=false;'
+
+  - platform: template
+    name: "sw - 8"
+    id: sw8
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,8,1\r\n"
+        - lambda: 'id(toestand_1)[7]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,8,0\r\n"
+        - lambda: 'id(toestand_1)[7]=false;'
+    
+  - platform: template
+    name: "sw - 9"
+    id: sw9
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,9,1\r\n"
+        - lambda: 'id(toestand_1)[8]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,9,0\r\n"
+        - lambda: 'id(toestand_1)[8]=false;'
+
+  - platform: template
+    name: "sw - 10"
+    id: sw10
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,10,1\r\n"
+        - lambda: 'id(toestand_1)[9]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,10,0\r\n"
+        - lambda: 'id(toestand_1)[9]=false;'
+
+  - platform: template
+    name: "sw - 11"
+    id: sw11
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,11,1\r\n"
+        - lambda: 'id(toestand_1)[10]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,11,0\r\n"
+        - lambda: 'id(toestand_1)[10]=false;'
+ 
+  - platform: template
+    name: "sw - 12"
+    id: sw12
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,12,1\r\n"
+        - lambda: 'id(toestand_1)[11]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,12,0\r\n"
+        - lambda: 'id(toestand_1)[11]=false;'
+        
+  - platform: template
+    name: "sw - 13"
+    id: sw13
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,13,1\r\n"
+        - lambda: 'id(toestand_1)[12]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,13,0\r\n"
+        - lambda: 'id(toestand_1)[12]=false;'
+
+  - platform: template
+    name: "sw - 14"
+    id: sw14
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,14,1\r\n"
+        - lambda: 'id(toestand_1)[13]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,14,0\r\n"
+        - lambda: 'id(toestand_1)[13]=false;'
+        
+  - platform: template
+    name: "sw - 15"
+    id: sw15
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,15,1\r\n"
+        - lambda: 'id(toestand_1)[14]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,15,0\r\n"
+        - lambda: 'id(toestand_1)[14]=false;'
+
+  - platform: template
+    name: "sw - 16"
+    id: sw16
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,16,1\r\n"
+        - lambda: 'id(toestand_1)[15]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,16,0\r\n"
+        - lambda: 'id(toestand_1)[15]=false;'
+
+  - platform: template
+    name: "sw - 17"
+    id: sw17
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,17,1\r\n"
+        - lambda: 'id(toestand_1)[16]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,17,0\r\n"
+        - lambda: 'id(toestand_1)[16]=false;'
+    
+  - platform: template
+    name: "sw - 18"
+    id: sw18
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,18,1\r\n"
+        - lambda: 'id(toestand_1)[17]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,18,0\r\n"
+        - lambda: 'id(toestand_1)[17]=false;'
+
+  - platform: template
+    name: "sw - 19"
+    id: sw19
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,19,1\r\n"
+        - lambda: 'id(toestand_1)[18]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,19,0\r\n"
+        - lambda: 'id(toestand_1)[18]=false;'
+
+  - platform: template
+    name: "sw - 20"
+    id: sw20
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,20,1\r\n"
+        - lambda: 'id(toestand_1)[19]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,20,0\r\n"
+        - lambda: 'id(toestand_1)[19]=false;'
+ 
+  - platform: template
+    name: "sw - 21"
+    id: sw21
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,21,1\r\n"
+        - lambda: 'id(toestand_1)[20]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,21,0\r\n"
+        - lambda: 'id(toestand_1)[20]=false;'
+        
+  - platform: template
+    name: "sw - 22"
+    id: sw22
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,22,1\r\n"
+        - lambda: 'id(toestand_1)[21]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,22,0\r\n"
+        - lambda: 'id(toestand_1)[21]=false;'
+
+  - platform: template
+    name: "sw - 23"
+    id: sw23
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write:  "RELAY-SET-255,23,1\r\n"
+        - lambda: 'id(toestand_1)[22]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,23,0\r\n"
+        - lambda: 'id(toestand_1)[22]=false;'
+
+  - platform: template
+    name: "sw - 24"
+    id: sw24
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write:  "RELAY-SET-255,24,1\r\n"
+        - lambda: 'id(toestand_1)[23]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,24,0\r\n"
+        - lambda: 'id(toestand_1)[23]=false;'
+    
+  - platform: template
+    name: "sw - 25"
+    id: sw25
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,25,1\r\n"
+        - lambda: 'id(toestand_1)[24]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,25,0\r\n"
+        - lambda: 'id(toestand_1)[24]=false;'
+
+  - platform: template
+    name: "sw - 26"
+    id: sw26
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,26,1\r\n"
+        - lambda: 'id(toestand_1)[25]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,26,0\r\n"
+        - lambda: 'id(toestand_1)[25]=false;'
+
+  - platform: template
+    name: "sw - 27"
+    id: sw27
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,27,1\r\n"
+        - lambda: 'id(toestand_1)[26]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,27,0\r\n"
+        - lambda: 'id(toestand_1)[26]=false;'
+ 
+  - platform: template
+    name: "sw - 28"
+    id: sw28
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,28,1\r\n"
+        - lambda: 'id(toestand_1)[27]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,28,0\r\n"
+        - lambda: 'id(toestand_1)[27]=false;'
+        
+  - platform: template
+    name: "sw - 29"
+    id: sw29
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,29,1\r\n"
+        - lambda: 'id(toestand_1)[28]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,29,0\r\n"
+        - lambda: 'id(toestand_1)[28]=false;'
+
+  - platform: template
+    name: "sw - 30"
+    id: sw30
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,30,1\r\n"
+        - lambda: 'id(toestand_1)[29]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,30,0\r\n"
+        - lambda: 'id(toestand_1)[29]=false;'
+        
+  - platform: template
+    name: "sw - 31"
+    id: sw31
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,31,1\r\n"
+        - lambda: 'id(toestand_1)[30]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,31,0\r\n"
+        - lambda: 'id(toestand_1)[30]=false;'
+
+  - platform: template
+    name: "sw - 32"
+    id: sw32
+    optimistic: true
+    on_turn_on:
+      then:
+        - uart.write: "RELAY-SET-255,32,1\r\n"
+        - lambda: 'id(toestand_1)[31]=true;'
+    on_turn_off:
+      then:
+        - uart.write: "RELAY-SET-255,32,0\r\n"
+        - lambda: 'id(toestand_1)[31]=false;' 
